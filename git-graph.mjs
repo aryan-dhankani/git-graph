@@ -912,7 +912,18 @@ try {
  * things the tracker cannot know — live CI on open PRs (the record can be half an hour
  * old) and this machine's branches — and it never writes anything back.
  */
-const REGISTRY_REPO = "Recepto-AI/codewiki";
+const CONFIG_PATH = path.join(process.env.USERPROFILE || process.env.HOME || ".", ".claude", "git-graph.json");
+
+function readConfig() {
+  try {
+    return JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+// --registry owner/repo, else GIT_GRAPH_REGISTRY, else { "registry": "owner/repo" } in CONFIG_PATH
+const REGISTRY_REPO = flag("--registry", process.env.GIT_GRAPH_REGISTRY || readConfig().registry || null);
 const REGISTRY_PATH = "changes/.facts.json";
 const REGISTRY_TTL = 25 * 60 * 1000;
 
@@ -924,6 +935,12 @@ let factsFetchedAt = 0;
 let factsError = null;
 
 async function loadFacts(force) {
+  if (!REGISTRY_REPO) {
+    factsError =
+      "no release registry is configured; start gg with --registry owner/repo, or put a registry entry in " +
+      CONFIG_PATH;
+    return null;
+  }
   if (facts && !force && Date.now() - factsFetchedAt < REGISTRY_TTL) return facts;
   try {
     const args = ["api", "-H", "Accept: application/vnd.github.raw", "repos/" + REGISTRY_REPO + "/contents/" + REGISTRY_PATH];

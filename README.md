@@ -28,6 +28,7 @@ never answers, so another site you have open cannot drive it through localhost.
    node git-graph.mjs --dev-port 5186      # the shared dev-server port (default 5186)
    node git-graph.mjs --dev-cmd npm        # package manager for dev servers (default pnpm)
    node git-graph.mjs --warm 3             # how many dev servers stay warm (default 3)
+   node git-graph.mjs --registry org/repo   # where the Release tab's change registry lives
    ```
 3. Open `http://127.0.0.1:<port>` (default `http://127.0.0.1:7345`).
 
@@ -129,8 +130,25 @@ A private `/__gg/ping` self-test on each family reports a conflict rather than p
 ## Release tab
 
 A second view beside the graph that answers "what can ship, and what is stuck?" for repos tracked
-by the Codewiki change registry (`Recepto-AI/codewiki`, `changes/.facts.json`, read with `gh api`
-and cached 25 minutes; **Fetch** forces a reload). CI comes live from `gh pr list`.
+by a change registry: a GitHub repo holding `changes/.facts.json`, read with `gh api` and cached 25
+minutes (**Fetch** forces a reload). CI comes live from `gh pr list`.
+
+Which repo holds the registry is configuration, not code. Set it once, in any of these (first wins):
+
+```bash
+node git-graph.mjs --registry your-org/your-registry-repo
+```
+
+```bash
+export GIT_GRAPH_REGISTRY=your-org/your-registry-repo
+```
+
+```json
+// ~/.claude/git-graph.json
+{ "registry": "your-org/your-registry-repo" }
+```
+
+With none set, the Release tab says so and how to fix it; the graph works as before.
 
 - **Verdict + pipeline** — one headline, then counts for local only → in review → ready for UAT →
   in dev → in uat → in main, each with a line saying why a stage is empty.
