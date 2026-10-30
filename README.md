@@ -113,12 +113,44 @@ only `127.0.0.1` leaves the IPv6 loopback free — a stray `vite --host` already
 would silently answer the browser instead of the proxy, and the bind would still look successful.
 A private `/__gg/ping` self-test on each family reports a conflict rather than pretending to work.
 
+## Checkpoints and focus
+
+- `origin/dev`, `origin/uat` and `origin/main` are a pinned spine: fixed left lanes in fixed hues
+  (main green, uat orange, dev blue), a diamond and a ruled row at each tip, and per-row promotion
+  dots showing which checkpoints already contain a commit. Toolbar chips jump to each tip and show
+  how many commits are not yet in main (counted with `git rev-list`, not the loaded window). Local
+  `dev`/`uat` are never used as checkpoints — they go stale.
+- Lanes are reserved only for parents inside the loaded window, and history loads in
+  `--topo-order`, so long-dead branches no longer run to the bottom of the graph.
+- Focus: the commits on HEAD that are not yet in `origin/dev` are drawn at full weight; everything
+  else steps back. "You" matches every identity of the current user (git email plus the GitHub
+  noreply address from `gh api user`).
+
+## Release tab
+
+A second view beside the graph that answers "what can ship, and what is stuck?" for repos tracked
+by the Codewiki change registry (`Recepto-AI/codewiki`, `changes/.facts.json`, read with `gh api`
+and cached 25 minutes; **Fetch** forces a reload). CI comes live from `gh pr list`.
+
+- **Verdict + pipeline** — one headline, then counts for local only → in review → ready for UAT →
+  in dev → in uat → in main, each with a line saying why a stage is empty.
+- **Mine / Team lists** — open PRs grouped by who has to act next (needs you, waiting on a
+  reviewer, approved but unlabelled, ready for UAT, you could review), plus half-ready
+  cross-repo changes, what is sitting in dev, and hygiene (PRs off the integration branch,
+  never-pushed and gone branches).
+- **Click a row** for its gate card: implementation, source readiness, dependencies, stage and
+  production, each READY / BLOCKED / UNKNOWN with the reason, and — when the PR conflicts with dev —
+  which merged changes touch the same files (from `git merge-tree`). The fix it suggests is to
+  stack on that change or wait for it to release, never to merge dev in.
+
+A repo the registry does not track says so in the Release tab; the graph works as before.
+
 ## Data format
 
 Graph data comes from:
 
 ```
-git log --all --date-order -300 --shortstat --pretty=format:"@@@%H|%h|%P|%an|%aI|%D|%s%n%b"
+git log --all --topo-order -300 --shortstat --pretty=format:"@@@%H|%h|%P|%an|%aI|%D|%s%n%b"
 ```
 
 The `@@@` marker delimits records so multi-line commit bodies survive. The older
