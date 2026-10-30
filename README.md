@@ -1,7 +1,7 @@
 # git-graph ("gg") — handover
 
 A personal VS-Code-style commit graph viewer, grown into a small worktree cockpit. Built
-2026-07-30, used across all of Ashish's local projects (not specific to any one repo).
+2026-07-30, used across all of Aryan's local projects (not specific to any one repo).
 
 ## What it is
 
@@ -185,7 +185,7 @@ and *Dev servers* is local-mode only and stays hidden there.
 ## Design language
 
 Spec-sheet look: JetBrains Mono micro-labels, hairlines, token-based colours, no hover glows —
-the same aesthetic as the rest of Ashish's internal tooling. Lane colours carry all the hue; the
+the same aesthetic as the rest of Aryan's internal tooling. Lane colours carry all the hue; the
 chrome stays quiet.
 
 ## Files
