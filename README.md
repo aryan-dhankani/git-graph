@@ -29,6 +29,7 @@ never answers, so another site you have open cannot drive it through localhost.
    node git-graph.mjs --dev-cmd npm        # package manager for dev servers (default pnpm)
    node git-graph.mjs --warm 3             # how many dev servers stay warm (default 3)
    node git-graph.mjs --registry org/repo   # where the Release tab's change registry lives
+   node git-graph.mjs --require-approval   # Release tab: gate "ready for UAT" on a second approver
    ```
 3. Open `http://127.0.0.1:<port>` (default `http://127.0.0.1:7345`).
 
@@ -152,8 +153,15 @@ With none set, the Release tab says so and how to fix it; the graph works as bef
 
 - **Verdict + pipeline** — one headline, then counts for local only → in review → ready for UAT →
   in dev → in uat → in main, each with a line saying why a stage is empty.
-- **Mine / Team lists** — open PRs grouped by who has to act next (needs you, waiting on a
-  reviewer, approved but unlabelled, ready for UAT, you could review), plus half-ready
+- **What "ready for UAT" means** — by default, CI passes on the PR's latest commit and it merges
+  cleanly into the integration branch. Approvals are shown as an *Approved* tag but do not gate
+  anything, because on this team PRs merge without a second reviewer. Start with
+  `--require-approval` for the formal gate (an approval from someone other than the author, then
+  the `ready-for-uat` label); the verdict, the groups and the gate card all follow that switch.
+- **Mine / Team lists** — open PRs grouped by who has to act next: needs you (or blocked by its
+  author), still checking (no CI result yet, or the merge isn't computed), ready for UAT. Under
+  `--require-approval` the review groups return (waiting on a reviewer, approved but unlabelled,
+  you could review). Plus half-ready
   cross-repo changes, what is sitting in dev, and hygiene (PRs off the integration branch,
   never-pushed and gone branches).
 - **Click a row** for its gate card: implementation, source readiness, dependencies, stage and
