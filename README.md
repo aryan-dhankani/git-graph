@@ -39,6 +39,26 @@ A shell alias makes it one word. PowerShell (`notepad $PROFILE`):
 function gg { node "$HOME\.claude\tools\git-graph.mjs" @args }
 ```
 
+## Live reload
+
+`gg` starts a small supervisor that watches `git-graph.mjs` and keeps the server up to date, so
+you never restart it by hand:
+
+- **Only the page changed** (the `const HTML` line): the server re-reads it and open tabs reload.
+  Warm dev servers keep running.
+- **Server code changed:** the server shuts down cleanly, along with its dev servers, and starts
+  again on the new code.
+- **The file doesn't parse yet** (`node --check` fails, for example because it is half-written): it
+  is ignored until it does.
+
+The page also refreshes itself when the repo you're viewing changes (commits, saves, ref moves),
+through a server-sent event from a file watcher; `node_modules`, git objects and logs are ignored.
+
+Write edits to the installed file atomically (a temp file, then rename) so a half-written file is
+never picked up. To run a single process with no supervisor, for a test copy for example, pass
+`--child` or set `GG_NO_SUPERVISE=1`. The supervisor itself only picks up its own changes on a
+manual restart.
+
 ## The graph
 
 - Lane assignment follows VS Code's: a lane belongs to the commit expected there, the first parent
@@ -168,6 +188,10 @@ With none set, the Release tab says so and how to fix it; the graph works as bef
   production, each READY / BLOCKED / UNKNOWN with the reason, and — when the PR conflicts with dev —
   which merged changes touch the same files (from `git merge-tree`). The fix it suggests is to
   stack on that change or wait for it to release, never to merge dev in.
+- **Which stage a change is in** comes from git, not the registry. The registry's "reachable" flags
+  lag: a release merges each change's feature tip, so a PR's merge commit into dev never reaches uat
+  or main, but its head commit does. The runner checks the head against `rev-list` of
+  `origin/dev`, `origin/uat` and `origin/main`, cached per branch tip.
 
 A repo the registry does not track says so in the Release tab; the graph works as before.
 
