@@ -87,6 +87,50 @@ manual restart.
   local tracking branch. Checkout does *not* pre-refuse a dirty tree: git carries uncommitted
   changes across when they don't collide, and its own message is surfaced when they do.
 
+## Worktree actions and status
+
+Modelled on [Worktrunk](https://github.com/max-sixty/worktrunk) (MIT / Apache-2.0) — its
+`wt switch -c`, `wt switch pr:N`, `wt remove`, post-create hooks and `wt list --full` — fitted to
+a flow where new work is a `feature/<name>` branch cut from `origin/main` and lands by pull request.
+
+- **Create** — `feature/<name>` from a fresh `origin/main`, with no upstream (its first push
+  publishes its own name), in `C:\wt-<name>` on Windows or a sibling folder elsewhere
+  (`--wt-root` moves it). The graph switches to the new tree.
+- **Open PR** — `gh pr view N`: if a worktree already holds the PR's branch, go there; otherwise
+  check it out in `wt-pr-N`. A PR from a fork is fetched as `pull/N/head` into a local `pr-N`.
+- **Remove** — two clicks. Never `--force`, so git refuses uncommitted or untracked work. It also
+  refuses the main checkout, the folder gg was started in, a running install, and a
+  `node_modules` that is a junction or symlink (removing would delete through it). The tree's dev
+  server is stopped first; the branch is kept.
+- **Setup after create** — by default a create runs the package manager's install and copies
+  `.env`, `.env.local` and `amplify_outputs.json` from the main checkout. To choose the steps, add
+  a `setup` entry to `~/.claude/git-graph.json`, keyed by the main checkout's folder name (or `*`):
+
+  ```json
+  { "setup": { "my-repo": { "copy": [".env", "config/local.json"], "run": ["pnpm install", "pnpm codegen"] } } }
+  ```
+
+  `copy` paths are relative and may not climb out with `..`; files that already exist are left
+  alone. `run` steps go one after another in the new tree and stop at the first failure, with the
+  log on the row. Only your own config file is read — a repo cannot ship commands that gg runs.
+- **Status on every row**, loaded after the list so the panel opens at once, and re-read every
+  60s while it is open (**Recheck PRs** forces it):
+  - the PR for the branch — number, draft, CI ✓ ✗ …, approved / changes asked, conflicts, or
+    "merged → dev"; it links to GitHub and the tooltip names failing checks;
+  - ahead / behind its upstream, "not pushed", or "upstream gone" — one `for-each-ref` for all;
+  - uncommitted files, via `git --no-optional-locks status`, so it never takes `index.lock` from a
+    session committing in that tree (cached two minutes; it is the slow part across 70 trees);
+  - **Claude sessions working there** — read off the tail of each transcript in
+    `~/.claude/projects` touched in the last six hours, and matched to the deepest tree holding
+    the session's working folder: *working*, *needs you?* (a tool call waiting over 90s — often a
+    permission prompt), *your turn*, or *idle*. The tooltip lists each session's title.
+- **Clean up** — shown when the branch's PR has merged. It deletes the worktree and the local
+  branch, but only if every commit on the branch is already in that PR (its head commit, or in
+  `origin/<base>`), the tree is clean, and no Claude session there was active in the last ten
+  minutes. **Clean up merged (N)** does every eligible tree at once and lists what it kept and
+  why. Remote branches are never touched, and there is no merge button: merging stays a reviewed
+  pull request.
+
 ## Working tree
 
 A collapsible strip above the graph, grouped the way an editor does it: merge conflicts, staged,
