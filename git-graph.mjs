@@ -1752,6 +1752,28 @@ async function createWorktree(repo, name, install) {
   return { action: "created", id: added && added.id, name: path.basename(dest), path: dest, branch, base: "origin/main", installing: maybeInstall(added, install) };
 }
 
+// rmdir /s does not follow junctions, and neither does fs.rm; both only unlink them
+async function finishDelete(dest) {
+  console.log("finishing delete: " + dest);
+  if (process.platform === "win32") {
+    try {
+      await run("cmd", ["/d", "/c", "rmdir", "/s", "/q", dest], { timeout: 20 * 60 * 1000, windowsHide: true });
+    } catch {
+      // whatever is left gets a second try below
+    }
+  }
+  if (fs.existsSync(dest)) {
+    try {
+      await fs.promises.rm(dest, { recursive: true, force: true, maxRetries: 6, retryDelay: 500 });
+    } catch (e) {
+      throw new Error(
+        "git unregistered " + path.basename(dest) + " but part of the folder could not be deleted (" + String(e.code || e.message || e) +
+          "); close anything using it and delete the folder"
+      );
+    }
+  }
+}
+
 async function removeWorktree(repo) {
   const main = await mainWorktreeOf(repo);
   const dest = path.resolve(repo.path);
@@ -1782,7 +1804,12 @@ async function removeWorktree(repo) {
     // never --force: uncommitted or untracked work makes git refuse, which is the point
     await git(["worktree", "remove", dest], main);
   } catch (e) {
-    throw new Error(gitMessage(e));
+    // On Windows git can unregister the tree and delete its .git link, then stop with "Directory
+    // not empty" on a folder something still holds. It had already checked the tree was clean,
+    // so finish the delete instead of leaving an orphaned copy of the repo behind.
+    const listed = (await worktreesOf(main)).some((w) => norm(w.path) === norm(dest));
+    if (listed || !fs.existsSync(dest) || fs.existsSync(path.join(dest, ".git"))) throw new Error(gitMessage(e));
+    await finishDelete(dest);
   }
 
   stopWatching(norm(dest));
