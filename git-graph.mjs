@@ -595,7 +595,18 @@ async function checkout(at, wanted) {
  * become a shell argument.
  */
 const devs = new Map();
-const DEV_BASE = Number(flag("--dev-port", 5186));
+// --dev-port wins, then { "devPort": n } in ~/.claude/git-graph.json, then 5186. Google sign-in
+// only returns to the localhost ports the auth provider allows, so the port is worth pinning.
+const configDevPort = (() => {
+  try {
+    const file = path.join(process.env.USERPROFILE || process.env.HOME || ".", ".claude", "git-graph.json");
+    const n = Number(JSON.parse(fs.readFileSync(file, "utf8")).devPort);
+    return Number.isInteger(n) && n > 0 && n < 65536 ? n : null;
+  } catch {
+    return null;
+  }
+})();
+const DEV_BASE = Number(flag("--dev-port", configDevPort || 5186));
 const WARM_MAX = Math.max(1, Number(flag("--warm", 3)));
 const DEV_CMD = flag("--dev-cmd", "pnpm");
 const LOG_KEEP = 40;

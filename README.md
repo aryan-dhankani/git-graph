@@ -33,6 +33,11 @@ never answers, so another site you have open cannot drive it through localhost.
    ```
 3. Open `http://127.0.0.1:<port>` (default `http://127.0.0.1:7345`).
 
+To keep the dev-server port without passing `--dev-port` every time, set `"devPort"` in
+`~/.claude/git-graph.json`, e.g. `{ "devPort": 5173 }`. The flag still wins for one run. This
+matters for OAuth sign-in (Google via Cognito, for one): the provider only sends you back to the
+localhost ports it allows, so the shared port has to be one of them.
+
 A shell alias makes it one word. PowerShell (`notepad $PROFILE`):
 
 ```powershell
